@@ -90,6 +90,12 @@ export default function ProblemDetail() {
 
       {attempt && (
         <>
+          <div style={{ padding: '16px', backgroundColor: '#f0f4f8', borderRadius: '8px', marginTop: '20px', marginBottom: '20px' }}>
+            <h3>Your Submission</h3>
+            <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '14px', margin: 0 }}>
+              {attempt.submission_content}
+            </pre>
+          </div>
           <FeedbackView evaluation={attempt.evaluation} />
           <Link to="/history" className="history-link">
             View in History

@@ -15,7 +15,7 @@ export default function FeedbackView({ evaluation }) {
           <div key={i} className="rubric-card" data-testid="rubric-card">
             <div className="rubric-header">
               <strong>{s.criterion}</strong>
-              <span className="score">{s.score}/5</span>
+              <span className="score">{s.score}/10</span>
             </div>
             {s.evidence && (
               <p>
