@@ -4,7 +4,7 @@ React + Vite app: pick an LLD problem, submit a text design, and read rubric fee
 
 ## Run locally
 
-```bash
+```poershell
 npm install
 npm run dev
 ```
