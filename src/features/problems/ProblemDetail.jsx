@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api, getLearnerId } from '../../api/client'
 import DesignEditor from '../practice/DesignEditor'
@@ -15,9 +15,13 @@ export default function ProblemDetail() {
   const [attempt, setAttempt] = useState(null)
   const [error, setError] = useState(null)
 
+  // Cache the in-flight promise so Strict Mode's double-run reuses it
+  const attemptPromiseRef = useRef(null)
+
   useEffect(() => {
     let cancelled = false
 
+    // Fetch problem (safe to run twice)
     api
       .getProblem(id)
       .then((p) => {
@@ -27,13 +31,19 @@ export default function ProblemDetail() {
         if (!cancelled) setError(e.message)
       })
 
-    api
-      .startAttempt(id, learnerId)
+    // Start (or reuse) the attempt — cached promise prevents duplicates
+    if (!attemptPromiseRef.current) {
+      attemptPromiseRef.current = api.startAttempt(id, learnerId)
+    }
+
+    attemptPromiseRef.current
       .then((a) => {
-        if (!cancelled) setAttemptId(a.id)
+        // Do NOT check `cancelled` here — we want the ID to persist
+        setAttemptId(a.id)
       })
       .catch((e) => {
         if (!cancelled) setError(e.message)
+        attemptPromiseRef.current = null // allow retry on failure
       })
 
     return () => {
@@ -42,13 +52,17 @@ export default function ProblemDetail() {
   }, [id, learnerId])
 
   async function handleSubmit() {
+    if (!attemptId) {
+      setError('Attempt is still being set up. Please wait a moment and try again.')
+      return
+    }
+
     setSubmitting(true)
     setError(null)
     try {
       const result = await api.submitAttempt(attemptId, content)
       setAttempt(result)
     } catch (e) {
-      // Submit is usually sync; if it times out, try loading the attempt once.
       try {
         const fallback = await api.getAttempt(attemptId)
         if (fallback.evaluation) {
@@ -79,13 +93,20 @@ export default function ProblemDetail() {
       )}
 
       {!attempt && (
-        <DesignEditor
-          content={content}
-          onChange={setContent}
-          onSubmit={handleSubmit}
-          submitting={submitting}
-          error={error}
-        />
+        <>
+          <DesignEditor
+            content={content}
+            onChange={setContent}
+            onSubmit={handleSubmit}
+            submitting={submitting || !attemptId}
+            error={error}
+          />
+          {!attemptId && (
+            <p className="muted" style={{ fontSize: '0.85em' }}>
+              Preparing attempt…
+            </p>
+          )}
+        </>
       )}
 
       {attempt && (
@@ -96,6 +117,7 @@ export default function ProblemDetail() {
               {attempt.submission_content}
             </pre>
           </div>
+
           <FeedbackView evaluation={attempt.evaluation} />
           <Link to="/history" className="history-link">
             View in History
